@@ -16,6 +16,12 @@ export enum SystemMode {
     EmergencyHeating = 5,
 }
 
+export enum HoldType {
+    StandBy = 7,
+    Hold = 2,
+    Auto = 0
+}
+
 export const consts = {
   categoryTypes: {
     CARBONMONOXIDEDETECTORS: 'carbonMonoxideDetectors',

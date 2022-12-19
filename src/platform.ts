@@ -29,7 +29,7 @@ export class SalusSQ610HomebridgePlatform implements DynamicPlatformPlugin {
     this.email = this.config.email;
     this.password = this.config.password;
     this.thermostatModels = this.config.thermostatModels;
-    
+
     this.api.on('didFinishLaunching', () => {
       this.discoverDevices();
     });
@@ -45,10 +45,10 @@ export class SalusSQ610HomebridgePlatform implements DynamicPlatformPlugin {
       return;
     }
     const salusConnect = new SalusConnect({
-      username: this.email, 
-      password: this.password, 
-      log: this.log, 
-      thermostatModels: ['SQ610', 'SQ610RF']
+      username: this.email,
+      password: this.password,
+      log: this.log,
+      thermostatModels: ['SQ610', 'SQ610RF'],
     });
 
     let devices:DeviceWithProps[] = [];

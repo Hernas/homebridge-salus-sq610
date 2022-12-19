@@ -13,21 +13,24 @@ export function getKnownProperty(props: SalusProperty[], prop: Props): SalusProp
 }
 
 export function getKnownProperties(props: SalusProperty[]): Record<Props, SalusProperty | undefined> {
-    const parsedProps: Record<string, SalusProperty> = {};
-    props.forEach(prop => {
-        parsedProps[prop.name] = prop;
-    });
-    return {
-        [Props.Temperature]: parsedProps[makeProp(Props.Temperature)],
-        [Props.Humidity]: parsedProps[makeProp(Props.Humidity)],
-        [Props.HeatingSetpoint]: parsedProps[makeProp(Props.HeatingSetpoint)],
-        [Props.CoolingSetpoint]: parsedProps[makeProp(Props.CoolingSetpoint)],
-        [Props.RunningState]: parsedProps[makeProp(Props.RunningState)],
-        [Props.State]: parsedProps[makeProp(Props.State)],
-        [Props.UpdateTargetTemperature]: parsedProps[makeProp(Props.UpdateTargetTemperature)],
-        [Props.UpdateState]: parsedProps[makeProp(Props.UpdateState)],
-        [Props.SystemMode]: parsedProps[makeProp(Props.SystemMode)],
-    }
+  const parsedProps: Record<string, SalusProperty> = {};
+  props.forEach(prop => {
+    parsedProps[prop.name] = prop;
+  });
+  return {
+    [Props.Temperature]: parsedProps[makeProp(Props.Temperature)],
+    [Props.Humidity]: parsedProps[makeProp(Props.Humidity)],
+    [Props.HeatingSetpoint]: parsedProps[makeProp(Props.HeatingSetpoint)],
+    [Props.CoolingSetpoint]: parsedProps[makeProp(Props.CoolingSetpoint)],
+    [Props.RunningState]: parsedProps[makeProp(Props.RunningState)],
+    [Props.HoldType]: parsedProps[makeProp(Props.HoldType)],
+    [Props.SetHeatingSetpoint]: parsedProps[makeProp(Props.SetHeatingSetpoint)],
+    [Props.SetCoolingSetpoint]: parsedProps[makeProp(Props.SetCoolingSetpoint)],
+    [Props.SetHoldType]: parsedProps[makeProp(Props.SetHoldType)],
+    [Props.SystemMode]: parsedProps[makeProp(Props.SystemMode)],
+    [Props.SetAutoHeatingSetpoint]: parsedProps[makeProp(Props.SetAutoHeatingSetpoint)],
+    [Props.SetAutoCoolingSetpoint]: parsedProps[makeProp(Props.SetAutoCoolingSetpoint)],
+  };
 }
 
 export enum Props {
@@ -36,16 +39,13 @@ export enum Props {
     HeatingSetpoint = 'HeatingSetpoint_x100',
     CoolingSetpoint = 'CoolingSetpoint_x100',
     RunningState = 'RunningState',
-    State = 'HoldType',
-    UpdateTargetTemperature = 'SetHeatingSetpoint_x100',
-    UpdateState = 'SetHoldType',
+    HoldType = 'HoldType',
+    SetHeatingSetpoint = 'SetHeatingSetpoint_x100',
+    SetAutoHeatingSetpoint = 'SetAutoHeatingSetpoint_x100',
+    SetCoolingSetpoint = 'SetCoolingSetpoint_x100',
+    SetAutoCoolingSetpoint = 'SetAutoCoolingSetpoint_x100',
+    SetHoldType = 'SetHoldType',
     SystemMode = 'SystemMode'
-}
-
-export enum State {
-    StandBy = 7,
-    Hold = 2,
-    Auto = 0
 }
 
 export class Token {
@@ -82,7 +82,7 @@ export class SalusConnect {
 
   constructor(
     { username, password, thermostatModels = [], log }:
-    { username: string; password: string; thermostatModels: string[]; log?: Logger },
+            { username: string; password: string; thermostatModels: string[]; log?: Logger },
   ) {
     this.username = username;
     this.password = password;
@@ -102,6 +102,11 @@ export class SalusConnect {
     return token.token;
   }
 
+  async refreshToken() {
+    this.token = undefined;
+    return await this.getToken();
+  }
+
   async login() {
     const response = await axios.post(this.buildUrl('users/sign_in'), { user: { email: this.username, password: this.password } });
     if (response.status !== 200) {
@@ -115,13 +120,17 @@ export class SalusConnect {
     return token;
   }
 
-  async getDevices() {
+  async getDevices(retried = false) {
     const token = await this.getToken();
     const response = await axios.get(this.buildUrl('apiv1/devices'), {
       headers: {
         'Authorization': `Bearer ${token}`,
       },
     });
+    if(!retried && response.status === 401) {
+      await this.refreshToken();
+      return this.getDevices(true);
+    }
     if (response.status !== 200) {
       throw new Error(`Wrong response status[${response.status}] for getDevices`);
     }
@@ -145,7 +154,7 @@ export class SalusConnect {
     return result;
   }
 
-  async getProperty({ id, prop }: { id: string; prop: Props }): Promise<any> {
+  async getProperty({ id, prop, retried }: { id: string; prop: Props; retried?: boolean }): Promise<any> {
     const token = await this.getToken();
     const response = await axios(this.buildUrl(`apiv1/dsns/${id}/properties/${makeProp(prop)}`), {
       method: 'GET',
@@ -153,10 +162,17 @@ export class SalusConnect {
         'Authorization': `Bearer ${token}`,
       },
     });
+    if(!retried && response.status === 401) {
+      await this.refreshToken();
+      return this.getProperty({id, prop, retried: true});
+    }
+    if(response.status !== 200) {
+      throw new Error(`'Wrong response on getProperty(${JSON.stringify({ id, prop })}): ${response.data}'`);
+    }
     return response.data;
   }
 
-  async getAllProperties({ id }: { id: string }): Promise<SalusProperty[]> {
+  async getAllProperties({ id, retried }: { id: string; retried?: boolean }): Promise<SalusProperty[]> {
     const token = await this.getToken();
     const response = await axios(this.buildUrl(`apiv1/dsns/${id}/properties`), {
       method: 'GET',
@@ -164,20 +180,34 @@ export class SalusConnect {
         'Authorization': `Bearer ${token}`,
       },
     });
+    if(!retried && response.status === 401) {
+      await this.refreshToken();
+      return this.getAllProperties({id, retried: true});
+    }
+    if(response.status !== 200) {
+      throw new Error(`'Wrong response on getAllProperties(${JSON.stringify({ id })}): ${response.data}'`);
+    }
     return response.data.map(data => data.property) as SalusProperty[];
   }
 
-  async setProperty({ id, prop, value }: { id: string; prop: Props; value: any }) {
+  async setProperty({ id, prop, value, retried }: { id: string; prop: Props; value: any; retried?: boolean }): Promise<{ value: any }> {
     const token = await this.getToken();
-    const response = await axios(this.buildUrl(`apiv1/dsns/${id}/properties/${makeProp(prop)}/datapoints`), {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-      },
-      data: JSON.stringify({ 'datapoint': { value } }),
-    });
-    return response.data;
+    this.log?.debug(`setProperty(${JSON.stringify({ id, prop, value })})`);
+    const response = await axios.post(this.buildUrl(`apiv1/dsns/${id}/properties/${makeProp(prop)}/datapoints`),
+      { 'datapoint': { value } }, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+    if(!retried && response.status === 401) {
+      await this.refreshToken();
+      return this.setProperty({id, prop, value, retried: true});
+    }
+    if(response.status !== 201) {
+      throw new Error(`'Wrong response on setProperty(${JSON.stringify({ id, prop, value })}): ${response.data}'`);
+    }
+    this.log?.debug(`Response: ${JSON.stringify(response.data, undefined, 4)}`);
+    return response.data.datapoint;
   }
 
   buildUrl(url: string) {
