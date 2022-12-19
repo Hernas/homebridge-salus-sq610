@@ -1,3 +1,5 @@
+import { CharacteristicValue } from 'homebridge';
+
 export interface SalusProperty {
     type: string;
     name: string;
@@ -16,7 +18,7 @@ export interface SalusProperty {
     derived: boolean;
     app_type: null;
     recipe: null;
-    value: any;
+    value: CharacteristicValue;
     generated_from: string | null;
     enerated_at: number | null;
     denied_roles: [];

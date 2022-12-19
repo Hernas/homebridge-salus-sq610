@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { Logger } from 'homebridge';
+import { CharacteristicValue, Logger } from 'homebridge';
 import { SalusProperty } from './SalusProperty';
 
 const baseUrl = 'https://eu.salusconnect.io/';
@@ -154,7 +154,7 @@ export class SalusConnect {
     return result;
   }
 
-  async getProperty({ id, prop, retried }: { id: string; prop: Props; retried?: boolean }): Promise<any> {
+  async getProperty({ id, prop, retried }: { id: string; prop: Props; retried?: boolean }): Promise<SalusProperty> {
     const token = await this.getToken();
     const response = await axios(this.buildUrl(`apiv1/dsns/${id}/properties/${makeProp(prop)}`), {
       method: 'GET',
@@ -190,7 +190,8 @@ export class SalusConnect {
     return response.data.map(data => data.property) as SalusProperty[];
   }
 
-  async setProperty({ id, prop, value, retried }: { id: string; prop: Props; value: any; retried?: boolean }): Promise<{ value: any }> {
+  async setProperty({ id, prop, value, retried }: { id: string; prop: Props; value: CharacteristicValue; retried?: boolean }):
+  Promise<{ value: CharacteristicValue }> {
     const token = await this.getToken();
     this.log?.debug(`setProperty(${JSON.stringify({ id, prop, value })})`);
     const response = await axios.post(this.buildUrl(`apiv1/dsns/${id}/properties/${makeProp(prop)}/datapoints`),

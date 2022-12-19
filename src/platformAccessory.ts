@@ -74,7 +74,8 @@ export class SalusSQ610Accessory {
     const holdType = props.HoldType?.value as HoldType | undefined;
     // Current
     if (props.LocalTemperature_x100) {
-      this.service.getCharacteristic(this.platform.Characteristic.CurrentTemperature).updateValue(props.LocalTemperature_x100.value / 100);
+      this.service.getCharacteristic(this.platform.Characteristic.CurrentTemperature)
+        .updateValue(parseInt(`${props.LocalTemperature_x100.value}`) / 100);
     }
     if (props.RunningState) {
       const state = (() => {
@@ -100,7 +101,8 @@ export class SalusSQ610Accessory {
 
     // Target
     if (props.HeatingSetpoint_x100) {
-      this.service.getCharacteristic(this.platform.Characteristic.TargetTemperature).updateValue(props.HeatingSetpoint_x100.value / 100);
+      this.service.getCharacteristic(this.platform.Characteristic.TargetTemperature)
+        .updateValue(parseInt(`${props.HeatingSetpoint_x100.value}`) / 100);
     }
     if (props.SystemMode) {
       const state = (() => {
