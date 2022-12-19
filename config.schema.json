@@ -1,0 +1,30 @@
+{
+  "pluginAlias": "SalusSQ610HomebridgePlugin",
+  "pluginType": "platform",
+  "headerDisplay": "",
+  "footerDisplay": "",
+  "singular": true,
+  "schema": {
+    "type": "object",
+    "properties": {
+      "email": {
+        "title": "Email",
+        "type": "string",
+        "required": true,
+        "default": ""
+      },
+      "password": {
+        "title": "Password",
+        "type": "string",
+        "required": true,
+        "default": ""
+      },
+      "refreshTime": {
+        "title": "Refresh time",
+        "type": "integer",
+        "minimum": 15,
+        "default": 15
+      }
+    }
+  }
+}
