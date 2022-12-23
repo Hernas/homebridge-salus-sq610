@@ -15,10 +15,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/@hernas/homebridge-salus-sq610"
+    "url": "git+https://github.com/hernas/homebridge-salus-sq610"
   },
   "bugs": {
-    "url": "https://github.com/@hernas/homebridge-salus-sq610/issues"
+    "url": "https://github.com/hernas/homebridge-salus-sq610/issues"
   },
   "keywords": [
     "salus",
