@@ -34,7 +34,11 @@ export class SalusSQ610Accessory {
       maxValue: 100,
       minStep: 0.1,
     });
-    this.service.getCharacteristic(this.platform.Characteristic.TargetTemperature).onSet(this.onTargetTemperatureSet.bind(this));
+    this.service.getCharacteristic(this.platform.Characteristic.TargetTemperature).setProps({
+      minValue: 0,
+      maxValue: 40,
+      minStep: 0.5,
+    }).onSet(this.onTargetTemperatureSet.bind(this));
     this.updateValues(this.device.props);
     this.refreshTimeout();
   }
