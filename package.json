@@ -33,7 +33,7 @@
   ],
   "author": "Mike Hernas",
   "license": "MIT",
-  "homepage": "https://github.com/@hernas/homebridge-salus-sq610",
+  "homepage": "https://github.com/hernas/homebridge-salus-sq610",
   "dependencies": {
     "axios": "^0.26.1"
   },
