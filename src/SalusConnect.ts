@@ -34,18 +34,18 @@ export function getKnownProperties(props: SalusProperty[]): Record<Props, SalusP
 }
 
 export enum Props {
-    Temperature = 'LocalTemperature_x100',
-    Humidity = 'SunnySetpoint_x100',
-    HeatingSetpoint = 'HeatingSetpoint_x100',
-    CoolingSetpoint = 'CoolingSetpoint_x100',
-    RunningState = 'RunningState',
-    HoldType = 'HoldType',
-    SetHeatingSetpoint = 'SetHeatingSetpoint_x100',
-    SetAutoHeatingSetpoint = 'SetAutoHeatingSetpoint_x100',
-    SetCoolingSetpoint = 'SetCoolingSetpoint_x100',
-    SetAutoCoolingSetpoint = 'SetAutoCoolingSetpoint_x100',
-    SetHoldType = 'SetHoldType',
-    SystemMode = 'SystemMode'
+  Temperature = 'LocalTemperature_x100',
+  Humidity = 'SunnySetpoint_x100',
+  HeatingSetpoint = 'HeatingSetpoint_x100',
+  CoolingSetpoint = 'CoolingSetpoint_x100',
+  RunningState = 'RunningState',
+  HoldType = 'HoldType',
+  SetHeatingSetpoint = 'SetHeatingSetpoint_x100',
+  SetAutoHeatingSetpoint = 'SetAutoHeatingSetpoint_x100',
+  SetCoolingSetpoint = 'SetCoolingSetpoint_x100',
+  SetAutoCoolingSetpoint = 'SetAutoCoolingSetpoint_x100',
+  SetHoldType = 'SetHoldType',
+  SystemMode = 'SystemMode'
 }
 
 export class Token {
@@ -82,7 +82,7 @@ export class SalusConnect {
 
   constructor(
     { username, password, thermostatModels = [], log }:
-            { username: string; password: string; thermostatModels: string[]; log?: Logger },
+      { username: string; password: string; thermostatModels: string[]; log?: Logger },
   ) {
     this.username = username;
     this.password = password;
@@ -103,16 +103,13 @@ export class SalusConnect {
   }
 
   async refreshToken() {
+    this.log?.info('Got 401, refreshing token...');
     this.token = undefined;
     return await this.getToken();
   }
 
   async login() {
     const response = await axios.post(this.buildUrl('users/sign_in'), { user: { email: this.username, password: this.password } });
-    if (response.status !== 200) {
-      throw Error(`Wrong status code[${response.status}]`);
-    }
-
     const token = response.data.access_token;
     if (!token) {
       throw new Error('Could not get token from login');
@@ -122,93 +119,113 @@ export class SalusConnect {
 
   async getDevices(retried = false) {
     const token = await this.getToken();
-    const response = await axios.get(this.buildUrl('apiv1/devices'), {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
-    });
-    if(!retried && response.status === 401) {
-      await this.refreshToken();
-      return this.getDevices(true);
-    }
-    if (response.status !== 200) {
-      throw new Error(`Wrong response status[${response.status}] for getDevices`);
-    }
-    const allDevices = response.data;
-
-
-    const result: DeviceWithProps[] = [];
-    for (const e of allDevices) {
-      const device = e.device;
-      if (this.thermostatModels.includes(device.oem_model.toUpperCase())) {
-        result.push(
-          new DeviceWithProps(
-            device.dsn,
-            device.product_name,
-            device.oem_model,
-            await this.getAllProperties({ id: device.dsn }),
-          ),
-        );
-      }
-    }
-    return result;
-  }
-
-  async getProperty({ id, prop, retried }: { id: string; prop: Props; retried?: boolean }): Promise<SalusProperty> {
-    const token = await this.getToken();
-    const response = await axios(this.buildUrl(`apiv1/dsns/${id}/properties/${makeProp(prop)}`), {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
-    });
-    if(!retried && response.status === 401) {
-      await this.refreshToken();
-      return this.getProperty({id, prop, retried: true});
-    }
-    if(response.status !== 200) {
-      throw new Error(`'Wrong response on getProperty(${JSON.stringify({ id, prop })}): ${response.data}'`);
-    }
-    return response.data;
-  }
-
-  async getAllProperties({ id, retried }: { id: string; retried?: boolean }): Promise<SalusProperty[]> {
-    const token = await this.getToken();
-    const response = await axios(this.buildUrl(`apiv1/dsns/${id}/properties`), {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
-    });
-    if(!retried && response.status === 401) {
-      await this.refreshToken();
-      return this.getAllProperties({id, retried: true});
-    }
-    if(response.status !== 200) {
-      throw new Error(`'Wrong response on getAllProperties(${JSON.stringify({ id })}): ${response.data}'`);
-    }
-    return response.data.map(data => data.property) as SalusProperty[];
-  }
-
-  async setProperty({ id, prop, value, retried }: { id: string; prop: Props; value: CharacteristicValue; retried?: boolean }):
-  Promise<{ value: CharacteristicValue }> {
-    const token = await this.getToken();
-    this.log?.debug(`setProperty(${JSON.stringify({ id, prop, value })})`);
-    const response = await axios.post(this.buildUrl(`apiv1/dsns/${id}/properties/${makeProp(prop)}/datapoints`),
-      { 'datapoint': { value } }, {
+    try {
+      const response = await axios.get(this.buildUrl('apiv1/devices'), {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
       });
-    if(!retried && response.status === 401) {
-      await this.refreshToken();
-      return this.setProperty({id, prop, value, retried: true});
+      const allDevices = response.data;
+
+      const result: DeviceWithProps[] = [];
+      for (const e of allDevices) {
+        const device = e.device;
+        if (this.thermostatModels.includes(device.oem_model.toUpperCase())) {
+          result.push(
+            new DeviceWithProps(
+              device.dsn,
+              device.product_name,
+              device.oem_model,
+              await this.getAllProperties({ id: device.dsn }),
+            ),
+          );
+        }
+      }
+      return result;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        const status = error.response?.status;
+        if (!retried && status === 401) {
+          await this.refreshToken();
+          return this.getDevices(true);
+        }
+        throw new Error(`Wrong response status[${status}] for getDevices`);
+      }
+      throw error;
     }
-    if(response.status !== 201) {
-      throw new Error(`'Wrong response on setProperty(${JSON.stringify({ id, prop, value })}): ${response.data}'`);
+  }
+
+  async getProperty({ id, prop, retried }: { id: string; prop: Props; retried?: boolean }): Promise<SalusProperty> {
+    const token = await this.getToken();
+    try {
+      const response = await axios(this.buildUrl(`apiv1/dsns/${id}/properties/${makeProp(prop)}`), {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      return response.data;
+
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        const status = error.response?.status;
+        if (!retried && status === 401) {
+          await this.refreshToken();
+          return this.getProperty({ id, prop, retried: true });
+        }
+        throw new Error(`'Wrong response on getProperty(${JSON.stringify({ id, prop })}): ${error.response?.data}'`);
+      }
+      throw error;
     }
-    this.log?.debug(`Response: ${JSON.stringify(response.data, undefined, 4)}`);
-    return response.data.datapoint;
+  }
+
+  async getAllProperties({ id, retried }: { id: string; retried?: boolean }): Promise<SalusProperty[]> {
+    const token = await this.getToken();
+    try {
+      const response = await axios(this.buildUrl(`apiv1/dsns/${id}/properties`), {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      return response.data.map(data => data.property) as SalusProperty[];
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        const status = error.response?.status;
+        if (!retried && status === 401) {
+          await this.refreshToken();
+          return this.getAllProperties({ id, retried: true });
+        }
+        throw new Error(`'Wrong response on getAllProperties(${JSON.stringify({ id })}): ${error.response?.data}'`);
+      }
+      throw error;
+    }
+  }
+
+  async setProperty({ id, prop, value, retried }: { id: string; prop: Props; value: CharacteristicValue; retried?: boolean }):
+    Promise<{ value: CharacteristicValue }> {
+    const token = await this.getToken();
+    try {
+
+      const response = await axios.post(this.buildUrl(`apiv1/dsns/${id}/properties/${makeProp(prop)}/datapoints`),
+        { 'datapoint': { value } }, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+      this.log?.debug(`Response: ${JSON.stringify(response.data, undefined, 4)}`);
+      return response.data.datapoint;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        const status = error.response?.status;
+        if (!retried && status === 401) {
+          await this.refreshToken();
+          return this.setProperty({ id, prop, value, retried: true });
+        }
+        throw new Error(`'Wrong response on setProperty(${JSON.stringify({ id, prop, value })}): ${error.response?.data}'`);
+      }
+      throw error;
+    }
   }
 
   buildUrl(url: string) {
