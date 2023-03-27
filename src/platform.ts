@@ -42,13 +42,14 @@ export class SalusSQ610HomebridgePlatform implements DynamicPlatformPlugin {
 
   async discoverDevices() {
     if(!this.email || !this.password) {
+      this.log.error('Missing email & password, please configure the plugin correctly.');
       return;
     }
     const salusConnect = new SalusConnect({
       username: this.email,
       password: this.password,
       log: this.log,
-      thermostatModels: ['SQ610', 'SQ610RF'],
+      thermostatModels: ['SQ610', 'IT600THERM'],
     });
 
     let devices:DeviceWithProps[] = [];
@@ -56,6 +57,10 @@ export class SalusSQ610HomebridgePlatform implements DynamicPlatformPlugin {
       devices = await salusConnect.getDevices();
     } catch(e) {
       this.log.error(`Could not load the devices: ${e}`);
+      this.log.info('Trying to fetch devices again in 60s...');
+      setTimeout(() => {
+        this.discoverDevices();
+      }, 60000);
     }
     for (const device of devices) {
 

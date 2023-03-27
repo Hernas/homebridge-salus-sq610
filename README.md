@@ -1,8 +1,14 @@
 [![NPM](https://img.shields.io/npm/v/@hernas/homebridge-salus-sq610)](https://npmjs.org/package/@hernas/homebridge-salus-sq610)
-
+[![verified-by-homebridge](https://badgen.net/badge/homebridge/verified/purple)](https://github.com/homebridge/homebridge/wiki/Verified-Plugins)
 
 # homebridge-salus-sq610
-Salus SQ610/SQ610RF plugin for [HomeBridge](https://github.com/nfarina/homebridge) using the [Salus *Connect* API](https://eu.salusconnect.io/dashboard) to expose Salus Thermostats to Apple's HomeKit.
+Salus plugin for [HomeBridge](https://github.com/nfarina/homebridge) using the [Salus *Connect* API](https://eu.salusconnect.io/dashboard) to expose Salus Thermostats to Apple's HomeKit.
+
+**Supported devices:**
+* SQ610
+* SQ610RF
+* VS20WRF
+* VS10WRF
 
 ![HomeKit Screenshot](.github/statics/homekit-1.png)
 

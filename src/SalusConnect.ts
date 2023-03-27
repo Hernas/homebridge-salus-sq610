@@ -87,9 +87,7 @@ export class SalusConnect {
     this.username = username;
     this.password = password;
     this.log = log;
-    this.thermostatModels = thermostatModels.map((e) => {
-      return e.toUpperCase().replace(/^VS(10|20)\w+/, 'IT600THERMHW');
-    });
+    this.thermostatModels = thermostatModels;
   }
 
   async getToken(): Promise<string> {
@@ -117,6 +115,14 @@ export class SalusConnect {
     return token;
   }
 
+  isCorrectDevice(device: {oem_model: string}) {
+    const modelName = device.oem_model.toUpperCase();
+    this.log?.debug(`Checking if model[${modelName}] is supported...`);
+    return this.thermostatModels.some((model) => {
+      return modelName.includes(model);
+    });
+  }
+
   async getDevices(retried = false) {
     const token = await this.getToken();
     try {
@@ -130,7 +136,7 @@ export class SalusConnect {
       const result: DeviceWithProps[] = [];
       for (const e of allDevices) {
         const device = e.device;
-        if (this.thermostatModels.includes(device.oem_model.toUpperCase())) {
+        if (this.isCorrectDevice(device)) {
           result.push(
             new DeviceWithProps(
               device.dsn,
