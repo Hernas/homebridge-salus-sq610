@@ -2,7 +2,7 @@ import axios from 'axios';
 import { CharacteristicValue, Logger } from 'homebridge';
 import { SalusProperty } from './SalusProperty';
 
-const baseUrl = 'https://eu.salusconnect.io/';
+const baseUrl = 'https://us.salusconnect.io/';
 
 function makeProp(prop: Props) {
   return `ep_9:sIT600TH:${prop}`;
