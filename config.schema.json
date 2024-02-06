@@ -19,6 +19,12 @@
         "required": true,
         "default": ""
       },
+      "salusUrl": {
+        "title": "Salus URL",
+        "type": "string",
+        "required": false,
+        "default": "eu.salusconnect.io"
+      },
       "refreshTime": {
         "title": "Refresh time",
         "type": "integer",

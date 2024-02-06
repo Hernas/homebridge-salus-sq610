@@ -2,8 +2,6 @@ import axios from 'axios';
 import { CharacteristicValue, Logger } from 'homebridge';
 import { SalusProperty } from './SalusProperty';
 
-const baseUrl = 'https://eu.salusconnect.io/';
-
 function makeProp(prop: Props) {
   return `ep_9:sIT600TH:${prop}`;
 }
@@ -79,15 +77,17 @@ export class SalusConnect {
   private thermostatModels: string[];
   private token: Token | undefined;
   private log?: Logger;
+  private salusUrl: string;
 
   constructor(
-    { username, password, thermostatModels = [], log }:
-      { username: string; password: string; thermostatModels: string[]; log?: Logger },
+    { username, password, thermostatModels = [], log, salusUrl = 'eu.salusconnect.io' }:
+      { username: string; password: string; thermostatModels: string[]; log?: Logger; salusUrl?: string },
   ) {
     this.username = username;
     this.password = password;
     this.log = log;
     this.thermostatModels = thermostatModels;
+    this.salusUrl = salusUrl;
   }
 
   async getToken(): Promise<string> {
@@ -235,6 +235,6 @@ export class SalusConnect {
   }
 
   buildUrl(url: string) {
-    return `${baseUrl}${url}.json?timestamp=${new Date().getTime()}`;
+    return `https://${this.salusUrl}/${url}.json?timestamp=${new Date().getTime()}`;
   }
 }

@@ -50,6 +50,7 @@ export class SalusSQ610HomebridgePlatform implements DynamicPlatformPlugin {
       password: this.password,
       log: this.log,
       thermostatModels: ['SQ610', 'IT600THERM'],
+      salusUrl: this.config.salusUrl || undefined,
     });
 
     let devices:DeviceWithProps[] = [];
