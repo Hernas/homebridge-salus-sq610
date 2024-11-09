@@ -19,6 +19,7 @@ export function getKnownProperties(props: Map<string, CharacteristicValue>): Rec
     [Props.SystemMode]: props[Props.SystemMode],
     [Props.SetAutoHeatingSetpoint]: props[Props.SetAutoHeatingSetpoint],
     [Props.SetAutoCoolingSetpoint]: props[Props.SetAutoCoolingSetpoint],
+    [Props.SetSystemMode]: props[Props.SetSystemMode],
   };
 }
 
@@ -34,7 +35,8 @@ export enum Props {
   SetCoolingSetpoint = 'SetCoolingSetpoint_x100',
   SetAutoCoolingSetpoint = 'SetAutoCoolingSetpoint_x100',
   SetHoldType = 'SetHoldType',
-  SystemMode = 'SystemMode'
+  SystemMode = 'SystemMode',
+  SetSystemMode = 'SetSystemMode',
 }
 
 
@@ -286,7 +288,7 @@ export class SalusConnect {
               'UniID': device.rawData.data.UniID,
             },
             'sIT600TH': {
-              [prop]: Math.round(Number(value)*2)/2,
+              [prop]: value,
             },
           }],
         });

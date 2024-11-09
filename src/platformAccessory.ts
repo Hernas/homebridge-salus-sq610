@@ -39,8 +39,52 @@ export class SalusSQ610Accessory {
       maxValue: 40,
       minStep: 0.5,
     }).onSet(this.onTargetTemperatureSet.bind(this));
+    this.service.getCharacteristic(this.platform.Characteristic.TargetHeatingCoolingState).setProps({
+      validValues: [this.platform.Characteristic.TargetHeatingCoolingState.OFF,
+        this.platform.Characteristic.TargetHeatingCoolingState.HEAT],
+    })
+      .onSet(this.onTargetHeatingCoolingStateSet.bind(this));
     this.updateValues(this.device.props);
     this.refreshTimeout();
+  }
+
+  async onTargetHeatingCoolingStateSet(value: CharacteristicValue) {
+    this.platform.log.debug(`onTargetHeatingCoolingStateSet: ${value}`);
+
+    /**
+     *         if device.model == 'FC600':
+            request_data = { "sTherS": { "SetSystemMode": 4 if mode == HVAC_MODE_HEAT else 3 if mode == HVAC_MODE_COOL else HVAC_MODE_AUTO } }
+        else:
+            request_data = { "sIT600TH": { "SetHoldType": 7 if mode == HVAC_MODE_OFF else 0 } }
+
+
+            request_data = { "sIT600TH": { "SetHoldType": 7 if preset == PRESET_OFF else 2 if preset == PRESET_PERMANENT_HOLD else 0 } }
+     */
+    try {
+      let val = 0;
+      switch (value) {
+        // case this.platform.Characteristic.TargetHeatingCoolingState.AUTO:
+        //   val = SystemMode.Auto;
+        //   break;
+        // case this.platform.Characteristic.TargetHeatingCoolingState.COOL:
+        //   val = SystemMode.Cool;
+        //   break;
+        case this.platform.Characteristic.TargetHeatingCoolingState.HEAT:
+          val = HoldType.Auto;
+          break;
+        case this.platform.Characteristic.TargetHeatingCoolingState.OFF:
+          val = HoldType.StandBy;
+          break;
+      }
+
+      // const props = (() => {
+
+      //   }
+      // })();
+      await this.salusConnect.setProperty(this.device.device, Props.SetHoldType, val as number);
+    } catch (e) {
+      this.platform.log.error(`${e}`);
+    }
   }
 
   async onTargetTemperatureSet(value: CharacteristicValue) {
@@ -59,6 +103,7 @@ export class SalusSQ610Accessory {
             return [];
         }
       })();
+      value = Math.round(Number(value)*2)/2;
       await Promise.all(props.map(prop => this.salusConnect.setProperty(this.device.device, prop, value as number * 100 )));
     } catch (e) {
       this.platform.log.error(`${e}`);
