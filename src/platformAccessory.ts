@@ -20,13 +20,13 @@ export class SalusSQ610Accessory {
     this.latestKnownProps = getKnownProperties(this.device.props);
     this.accessory.getService(this.platform.Service.AccessoryInformation)!
       .setCharacteristic(this.platform.Characteristic.Manufacturer, 'Salus')
-      .setCharacteristic(this.platform.Characteristic.Model, this.device.model)
+      .setCharacteristic(this.platform.Characteristic.Model, this.device.device.modelIdentifier)
       .setCharacteristic(this.platform.Characteristic.SerialNumber, this.accessory.UUID);
 
     this.service = this.accessory.getService('Thermostat')
       || this.accessory.addService(this.platform.Service.Thermostat, 'Thermostat', 'thermostat');
 
-    this.service.setCharacteristic(this.platform.Characteristic.Name, this.device.name);
+    this.service.setCharacteristic(this.platform.Characteristic.Name, this.device.device.deviceName);
     this.service.getCharacteristic(this.platform.Characteristic.TemperatureDisplayUnits)
       .updateValue(this.platform.Characteristic.TemperatureDisplayUnits.CELSIUS);
     this.service.getCharacteristic(this.platform.Characteristic.CurrentTemperature).setProps({
@@ -46,7 +46,7 @@ export class SalusSQ610Accessory {
   async onTargetTemperatureSet(value: CharacteristicValue) {
     try {
       const props = (() => {
-        switch (this.latestKnownProps.SystemMode?.value) {
+        switch (this.latestKnownProps.SystemMode) {
           case SystemMode.Cool:
             return [Props.SetCoolingSetpoint];
           case SystemMode.Heat:
@@ -59,34 +59,37 @@ export class SalusSQ610Accessory {
             return [];
         }
       })();
-      await Promise.all(props.map(prop => this.salusConnect.setProperty({ id: this.device.id, prop, value: value as number * 100 })));
+      await Promise.all(props.map(prop => this.salusConnect.setProperty(this.device.device, prop, value as number * 100 )));
     } catch (e) {
       this.platform.log.error(`${e}`);
     }
   }
 
   updateValues(allProps: typeof this.device.props) {
+
     const props = getKnownProperties(allProps);
     this.latestKnownProps = props;
     const simplerProps = {};
+    this.platform.log.debug(`In updateValues props: ${JSON.stringify(props)}`);
     Object.keys(props).forEach(key => {
-      simplerProps[key] = props[key].value;
+      //simplerProps[key] = props[key].value;
+      simplerProps[key] = props[key];
     });
     this.platform.log.debug(
-      `Updating values [${this.device.name}]\n${JSON.stringify(simplerProps, undefined, 4)}`,
+      `Updating values [${this.device.device.deviceName}]\n${JSON.stringify(simplerProps, undefined, 4)}`,
     );
-    const holdType = props.HoldType?.value as HoldType | undefined;
+    const holdType = props.HoldType as HoldType | undefined;
     // Current
     if (props.LocalTemperature_x100) {
       this.service.getCharacteristic(this.platform.Characteristic.CurrentTemperature)
-        .updateValue(parseInt(`${props.LocalTemperature_x100.value}`) / 100);
+        .updateValue(parseInt(`${props.LocalTemperature_x100}`) / 100);
     }
     if (props.RunningState) {
       const state = (() => {
         if (holdType === HoldType.StandBy) {
           return this.platform.Characteristic.CurrentHeatingCoolingState.OFF;
         }
-        switch (props.RunningState?.value as RunningState) {
+        switch (props.RunningState as RunningState) {
           case RunningState.Heat:
             return this.platform.Characteristic.CurrentHeatingCoolingState.HEAT;
           case RunningState.Cool:
@@ -100,20 +103,20 @@ export class SalusSQ610Accessory {
     }
     if (props.SunnySetpoint_x100) {
       this.service.getCharacteristic(this.platform.Characteristic.CurrentRelativeHumidity)
-        .updateValue(props.SunnySetpoint_x100.value);
+        .updateValue(props.SunnySetpoint_x100);
     }
 
     // Target
     if (props.HeatingSetpoint_x100) {
       this.service.getCharacteristic(this.platform.Characteristic.TargetTemperature)
-        .updateValue(parseInt(`${props.HeatingSetpoint_x100.value}`) / 100);
+        .updateValue(parseInt(`${props.HeatingSetpoint_x100}`) / 100);
     }
     if (props.SystemMode) {
       const state = (() => {
         if (holdType === HoldType.StandBy) {
           return this.platform.Characteristic.CurrentHeatingCoolingState.OFF;
         }
-        switch (props.SystemMode?.value as SystemMode) {
+        switch (props.SystemMode as SystemMode) {
           case SystemMode.Auto:
             return this.platform.Characteristic.TargetHeatingCoolingState.AUTO;
           case SystemMode.Cool:
@@ -132,7 +135,7 @@ export class SalusSQ610Accessory {
 
   async refreshValues() {
     try {
-      this.updateValues(await this.salusConnect.getAllProperties({ id: this.device.id }));
+      this.updateValues(await this.salusConnect.getAllProperties(this.device.device));
     } catch (e) {
       this.platform.log.error(`${e}`);
     } finally {

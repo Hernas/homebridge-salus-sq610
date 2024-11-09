@@ -13,8 +13,8 @@ export class SalusSQ610HomebridgePlatform implements DynamicPlatformPlugin {
   public readonly Service: typeof Service = this.api.hap.Service;
   public readonly Characteristic: typeof Characteristic = this.api.hap.Characteristic;
 
-  private readonly email: string;
-  private readonly password: string;
+  private readonly ip_address: string;
+  private readonly eu_id: string;
   private readonly thermostatModels: string[];
 
   // this is used to track restored cached accessories
@@ -26,9 +26,9 @@ export class SalusSQ610HomebridgePlatform implements DynamicPlatformPlugin {
     public readonly api: API,
   ) {
     this.log.debug('Finished initializing platform:', this.config.name);
-    this.email = this.config.email;
-    this.password = this.config.password;
-    this.thermostatModels = this.config.thermostatModels;
+    this.ip_address = this.config.ip_address;
+    this.eu_id = this.config.eu_id;
+    this.thermostatModels = ['SQ610', 'IT600THERM'];
 
     this.api.on('didFinishLaunching', () => {
       this.discoverDevices();
@@ -41,16 +41,15 @@ export class SalusSQ610HomebridgePlatform implements DynamicPlatformPlugin {
   }
 
   async discoverDevices() {
-    if(!this.email || !this.password) {
-      this.log.error('Missing email & password, please configure the plugin correctly.');
+    if(!this.ip_address) {
+      this.log.error('Missing ip address, please configure the plugin correctly.');
       return;
     }
     const salusConnect = new SalusConnect({
-      username: this.email,
-      password: this.password,
+      ip_address: this.ip_address,
+      eu_id: this.eu_id,
       log: this.log,
-      thermostatModels: ['SQ610', 'IT600THERM'],
-      salusUrl: this.config.salusUrl || undefined,
+      thermostatModels: this.thermostatModels,
     });
 
     let devices:DeviceWithProps[] = [];
@@ -58,6 +57,9 @@ export class SalusSQ610HomebridgePlatform implements DynamicPlatformPlugin {
       devices = await salusConnect.getDevices();
     } catch(e) {
       this.log.error(`Could not load the devices: ${e}`);
+      if(e instanceof Error) {
+        this.log.error(`Could not load the devices: ${e.stack}`);
+      }
       this.log.info('Trying to fetch devices again in 60s...');
       setTimeout(() => {
         this.discoverDevices();
@@ -65,7 +67,7 @@ export class SalusSQ610HomebridgePlatform implements DynamicPlatformPlugin {
     }
     for (const device of devices) {
 
-      const uuid = this.api.hap.uuid.generate(device.id);
+      const uuid = this.api.hap.uuid.generate(device.device.uniID);
       const existingAccessory = this.accessories.find(accessory => accessory.UUID === uuid);
 
       if (existingAccessory) {
@@ -74,8 +76,8 @@ export class SalusSQ610HomebridgePlatform implements DynamicPlatformPlugin {
         this.api.updatePlatformAccessories([existingAccessory]);
         new SalusSQ610Accessory(this, existingAccessory, salusConnect);
       } else {
-        this.log.info('Adding new accessory:', device.name);
-        const accessory = new this.api.platformAccessory(device.name, uuid);
+        this.log.info('Adding new accessory:', device.device.deviceName);
+        const accessory = new this.api.platformAccessory(device.device.deviceName, uuid);
         accessory.context.device = device;
         new SalusSQ610Accessory(this, accessory, salusConnect);
         this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
