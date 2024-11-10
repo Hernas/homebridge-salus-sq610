@@ -1,10 +1,10 @@
 {
-  "name": "@hernas/homebridge-salus-sq610",
+  "name": "homebridge-salus-sq610",
   "version": "2.0.0",
   "description": "Homebridge plugin for Salus SQ610 & SQ610RF modules",
   "engines": {
     "node": ">=14.18.1",
-    "homebridge": ">=1.3.5"
+    "homebridge": ">=1.3.5 || ^2.0.0-beta.0"
   },
   "main": "dist/index.js",
   "scripts": {
