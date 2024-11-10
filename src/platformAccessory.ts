@@ -42,8 +42,7 @@ export class SalusSQ610Accessory {
     this.service.getCharacteristic(this.platform.Characteristic.TargetHeatingCoolingState).setProps({
       validValues: [this.platform.Characteristic.TargetHeatingCoolingState.OFF,
         this.platform.Characteristic.TargetHeatingCoolingState.HEAT],
-    })
-      .onSet(this.onTargetHeatingCoolingStateSet.bind(this));
+    }).onSet(this.onTargetHeatingCoolingStateSet.bind(this));
     this.updateValues(this.device.props);
     this.refreshTimeout();
   }

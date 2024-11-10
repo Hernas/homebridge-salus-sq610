@@ -10,8 +10,8 @@ import { DeviceWithProps, SalusConnect } from './SalusConnect';
  * parse the user config and discover/register accessories with Homebridge.
  */
 export class SalusSQ610HomebridgePlatform implements DynamicPlatformPlugin {
-  public readonly Service: typeof Service = this.api.hap.Service;
-  public readonly Characteristic: typeof Characteristic = this.api.hap.Characteristic;
+  public readonly Service: typeof Service
+  public readonly Characteristic: typeof Characteristic;
 
   private readonly ip_address: string;
   private readonly eu_id: string;
@@ -29,6 +29,9 @@ export class SalusSQ610HomebridgePlatform implements DynamicPlatformPlugin {
     this.ip_address = this.config.ip_address;
     this.eu_id = this.config.eu_id;
     this.thermostatModels = ['SQ610', 'IT600THERM'];
+
+    this.Service = api.hap.Service;
+    this.Characteristic = api.hap.Characteristic;
 
     this.api.on('didFinishLaunching', () => {
       this.discoverDevices();
