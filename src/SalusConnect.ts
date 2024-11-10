@@ -47,7 +47,7 @@ export class Device {
   public readonly modelIdentifier;
   public readonly deviceName;
   public readonly rawData;
-
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   constructor(deviceType: string, endpoint:number, uniID: string, modelIdentifier: string, deviceName:string, rawData:any) {
     this.deviceType = deviceType;
     this.endpoint = endpoint;
@@ -92,6 +92,7 @@ export class SalusConnect {
     this.lock = new Mutex();
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async makeEncryptedRequest(command:string, requestBody:any) {
     await this.lock.acquire();
 
@@ -131,8 +132,7 @@ export class SalusConnect {
       let message:string;
       if (e instanceof Error) {
         message = e.message;
-      }
-      else {
+      } else {
         message = String(e);
       }
       if (axios.isAxiosError(e) && e.code === 'ECONNABORTED') {
@@ -168,7 +168,7 @@ export class SalusConnect {
 
       if(!gateway) {
         throw new Error(
-          'Error occurred while communicating with iT600 gateway: response did not contain gateway information'
+          'Error occurred while communicating with iT600 gateway: response did not contain gateway information',
         );
       }
       return gateway['sGateway']['NetworkLANMAC'];
@@ -226,6 +226,7 @@ export class SalusConnect {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   getAllPropertiesLocal(flatPropsList:any) {
     const props:Map<string, CharacteristicValue> = new Map();
     Object.keys(flatPropsList).forEach((key) => {

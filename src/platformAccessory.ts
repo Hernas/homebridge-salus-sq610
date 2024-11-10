@@ -53,7 +53,8 @@ export class SalusSQ610Accessory {
 
     /**
      *         if device.model == 'FC600':
-            request_data = { "sTherS": { "SetSystemMode": 4 if mode == HVAC_MODE_HEAT else 3 if mode == HVAC_MODE_COOL else HVAC_MODE_AUTO } }
+            request_data = { "sTherS": { "SetSystemMode": 4 if mode == HVAC_MODE_HEAT
+            else 3 if mode == HVAC_MODE_COOL else HVAC_MODE_AUTO } }
         else:
             request_data = { "sIT600TH": { "SetHoldType": 7 if mode == HVAC_MODE_OFF else 0 } }
 
