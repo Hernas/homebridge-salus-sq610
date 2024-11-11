@@ -76,7 +76,7 @@ export class SalusConnect {
   private port: number;
   private timeout:number;
   private encryptor: IT600Encryptor;
-  private lock: Mutex;
+  private static lock: Mutex = new Mutex();
 
   constructor(
     { ip_address, eu_id, thermostatModels = [], log}:
@@ -89,12 +89,12 @@ export class SalusConnect {
     this.port = 80;
     this.timeout = 5000; // ms
     this.encryptor = new IT600Encryptor(this.eu_id);
-    this.lock = new Mutex();
+    //this.lock = new Mutex();
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async makeEncryptedRequest(command:string, requestBody:any) {
-    await this.lock.acquire();
+    await SalusConnect.lock.acquire();
 
     try {
       const requestUrl = `http://${this.host}:${this.port}/deviceid/${command}`;
@@ -102,7 +102,7 @@ export class SalusConnect {
 
       //this.log?.debug(`Gateway request: POST ${requestUrl}\n${requestBodyJson}\n`);
       const data = Buffer.from(this.encryptor.encrypt(requestBodyJson));
-
+      
       const response = await axios({
         method: 'post',
         url: requestUrl,
@@ -145,7 +145,7 @@ export class SalusConnect {
         throw new Error(message);
       }
     } finally {
-      this.lock.release();
+      SalusConnect.lock.release();
     }
   }
 
@@ -196,10 +196,12 @@ export class SalusConnect {
         const propslist = Object.assign({}, ...function _flatten(o) {
           return [].concat(...Object.keys(o).map(k => typeof o[k] === 'object' ? _flatten(o[k]) : ({[k]: o[k]})));
         }(element));
-        let niceName = propslist.DeviceName;
+        let niceName:string = propslist.DeviceName;
         if(propslist.DeviceName) {
-          niceName = JSON.parse(propslist.DeviceName).deviceName;
-          this.log?.debug(`Found nicename: ${niceName}`);
+          const parsedName = JSON.parse(propslist.DeviceName);
+          niceName = parsedName ? parsedName.deviceName : niceName;
+          niceName = niceName.trim();
+          niceName = niceName.replaceAll('/', ' ');
         }
 
         const device = new Device(propslist.DeviceType, propslist.Endpoint,

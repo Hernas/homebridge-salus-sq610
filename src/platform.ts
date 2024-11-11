@@ -25,7 +25,7 @@ export class SalusSQ610HomebridgePlatform implements DynamicPlatformPlugin {
     public readonly config: PlatformConfig,
     public readonly api: API,
   ) {
-    this.log.debug('Finished initializing platform:', this.config.name);
+    this.log.debug('Finished initializing platform:', PLATFORM_NAME);
     this.ip_address = this.config.ip_address;
     this.eu_id = this.config.eu_id;
     this.thermostatModels = ['SQ610', 'IT600THERM'];
@@ -74,6 +74,7 @@ export class SalusSQ610HomebridgePlatform implements DynamicPlatformPlugin {
       const existingAccessory = this.accessories.find(accessory => accessory.UUID === uuid);
 
       if (existingAccessory) {
+        existingAccessory.displayName = device.device.deviceName;
         this.log.info('Restoring existing accessory from cache:', existingAccessory.displayName);
         existingAccessory.context.device = device;
         this.api.updatePlatformAccessories([existingAccessory]);
