@@ -102,7 +102,7 @@ export class SalusConnect {
 
       //this.log?.debug(`Gateway request: POST ${requestUrl}\n${requestBodyJson}\n`);
       const data = Buffer.from(this.encryptor.encrypt(requestBodyJson));
-      
+
       const response = await axios({
         method: 'post',
         url: requestUrl,
