@@ -2,7 +2,7 @@
 [![verified-by-homebridge](https://badgen.net/badge/homebridge/verified/purple)](https://github.com/homebridge/homebridge/wiki/Verified-Plugins)
 
 # homebridge-salus-sq610
-Salus plugin for [HomeBridge](https://github.com/nfarina/homebridge) using the [Salus *Connect* API](https://eu.salusconnect.io/dashboard) to expose Salus Thermostats to Apple's HomeKit.
+Salus plugin for [HomeBridge](https://github.com/nfarina/homebridge) using a the Salus UG600 universal gateway on the local network to expose Salus Thermostats to Apple's HomeKit.
 
 **Supported devices:**
 * SQ610
@@ -13,7 +13,6 @@ Salus plugin for [HomeBridge](https://github.com/nfarina/homebridge) using the [
 ![HomeKit Screenshot](.github/statics/homekit-1.png)
 
 ## Things to know
-* Supports only one Salus account
 * Plugin implements all modes of heating, but let's the thermostate decide if it is in cooling or heating mode. (for example by shorting S1 & S2 pins on the board)
 
 ## Getting started
@@ -22,8 +21,8 @@ Salus plugin for [HomeBridge](https://github.com/nfarina/homebridge) using the [
 ```
 {
   "platform": "SalusSQ610HomebridgePlugin",
-  "email": "<YOUR_EMAIL_HERE>",
-  "password": "<YOUR_PASSWORD_HERE>"
+  "ip_address": "<UGW ip address like 192.168.0.100>",
+  "eu_id": "<Either 0000000000000000 or provide real euid from the bottom side of UGW>"
 }
 ```
 
