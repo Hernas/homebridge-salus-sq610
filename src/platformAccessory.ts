@@ -73,9 +73,7 @@ export class SalusSQ610Accessory {
     const props = getKnownProperties(allProps);
     this.latestKnownProps = props;
     const simplerProps = {};
-    this.platform.log.debug(`In updateValues props: ${JSON.stringify(props)}`);
     Object.keys(props).forEach(key => {
-      //simplerProps[key] = props[key].value;
       simplerProps[key] = props[key];
     });
     this.platform.log.debug(

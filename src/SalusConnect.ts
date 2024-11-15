@@ -89,7 +89,6 @@ export class SalusConnect {
     this.port = 80;
     this.timeout = 5000; // ms
     this.encryptor = new IT600Encryptor(this.eu_id);
-    //this.lock = new Mutex();
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -151,7 +150,6 @@ export class SalusConnect {
 
   isCorrectDevice(device: Device) {
     const modelName = device.modelIdentifier.toUpperCase();
-    //this.log?.debug(`Checking if model[${modelName}] is supported...`);
     return this.thermostatModels.some((model) => {
       return modelName.includes(model);
     });
@@ -190,7 +188,6 @@ export class SalusConnect {
 
       const result: DeviceWithProps[] = [];
       allDevices.forEach((element) => {
-        //this.log?.debug(`element: ${element}`);
 
         // ugly, as it overrides some of the properties like deviceTyoe, but makes it easy for the relevant props
         const propslist = Object.assign({}, ...function _flatten(o) {
@@ -328,13 +325,13 @@ export class IT600Encryptor {
     cipher.setAutoPadding(false);
     const paddedData = pkcs7.pad(Buffer.from(msg));
     const result = cipher.update(paddedData);
+    //no cipher.final(), otherwise it does not work anymore
     return result;
   }
 
   decrypt(cipherBytes) {
     const decipher = crypto.createDecipheriv(this.cipher_alg, this.key, this.iv);
     const result = Buffer.concat([decipher.update(cipherBytes), decipher.final()]);
-    //result += decipher.final();
     return result.toString('utf8');
   }
 }
