@@ -193,13 +193,17 @@ export class SalusConnect {
         const propslist = Object.assign({}, ...function _flatten(o) {
           return [].concat(...Object.keys(o).map(k => typeof o[k] === 'object' ? _flatten(o[k]) : ({[k]: o[k]})));
         }(element));
-        let niceName:string = propslist.DeviceName;
-        if(propslist.DeviceName) {
-          const parsedName = JSON.parse(propslist.DeviceName);
-          niceName = parsedName ? parsedName.deviceName : niceName;
-          niceName = niceName.trim();
-          niceName = niceName.replaceAll('/', ' ');
+        let niceName:string = propslist.DeviceName || propslist.UniID;
+        try {
+          const deviceNameObj = JSON.parse(niceName);
+          if(deviceNameObj.deviceName) {
+            niceName = deviceNameObj.deviceName;
+          }
+        } catch(err) {
+          this.log?.debug(String(err));
         }
+        niceName = niceName.trim();
+        niceName = niceName.replaceAll('/', ' ');
 
         const device = new Device(propslist.DeviceType, propslist.Endpoint,
           propslist.UniID, propslist.ModelIdentifier, niceName, element);
