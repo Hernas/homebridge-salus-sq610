@@ -19,6 +19,7 @@ export class SalusSQ610HomebridgePlatform implements DynamicPlatformPlugin {
 
   // this is used to track restored cached accessories
   public readonly accessories: PlatformAccessory[] = [];
+  private readonly discoveredAccessoryUUIDs: string[] = [];
 
   constructor(
     public readonly log: Logger,
@@ -67,7 +68,12 @@ export class SalusSQ610HomebridgePlatform implements DynamicPlatformPlugin {
       setTimeout(() => {
         this.discoverDevices();
       }, 60000);
+      return;
     }
+
+    // Clear the discovered accessories list before discovery
+    this.discoveredAccessoryUUIDs.length = 0;
+
     for (const device of devices) {
 
       const uuid = this.api.hap.uuid.generate(device.device.uniID);
@@ -85,6 +91,24 @@ export class SalusSQ610HomebridgePlatform implements DynamicPlatformPlugin {
         accessory.context.device = device;
         new SalusSQ610Accessory(this, accessory, salusConnect);
         this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
+      }
+
+      // Track this accessory as discovered
+      this.discoveredAccessoryUUIDs.push(uuid);
+    }
+
+    // Remove accessories that are no longer present
+    const accessoriesToRemove = this.accessories.filter(accessory =>
+      !this.discoveredAccessoryUUIDs.includes(accessory.UUID),
+    );
+
+    for (const accessory of accessoriesToRemove) {
+      this.log.info('Removing existing accessory from cache:', accessory.displayName);
+      this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
+      // Remove from our tracking array
+      const index = this.accessories.indexOf(accessory);
+      if (index > -1) {
+        this.accessories.splice(index, 1);
       }
     }
   }
