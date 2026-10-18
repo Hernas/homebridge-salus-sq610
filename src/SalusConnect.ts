@@ -1,8 +1,7 @@
 import axios from 'axios';
 import { CharacteristicValue, Logger } from 'homebridge';
-import * as crypto from 'crypto';
-import * as pkcs7 from 'pkcs7-padding';
 import {Mutex} from 'async-mutex';
+import { GatewayProtocol, UnsupportedProtocolFrameError, getCandidateProtocols, getFrame33Trailer } from './GatewayProtocol';
 
 
 export function getKnownProperties(props: Map<string, CharacteristicValue>): Record<Props, CharacteristicValue> {
@@ -75,7 +74,7 @@ export class SalusConnect {
   private log?: Logger;
   private port: number;
   private timeout:number;
-  private encryptor: IT600Encryptor;
+  private protocol?: GatewayProtocol;
   private static lock: Mutex = new Mutex();
 
   constructor(
@@ -88,7 +87,6 @@ export class SalusConnect {
     this.thermostatModels = thermostatModels;
     this.port = 80;
     this.timeout = 5000; // ms
-    this.encryptor = new IT600Encryptor(this.eu_id);
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -96,29 +94,26 @@ export class SalusConnect {
     await SalusConnect.lock.acquire();
 
     try {
-      const requestUrl = `http://${this.host}:${this.port}/deviceid/${command}`;
-      const requestBodyJson = JSON.stringify(requestBody);
+      let responseJson;
+      if (!this.protocol) {
+        const detected = await this.detectProtocol();
+        this.protocol = detected.protocol;
+        if (command === 'read' && requestBody?.requestAttr === 'readall') {
+          // detection already did this request
+          responseJson = detected.response;
+        }
+      }
 
-      //this.log?.debug(`Gateway request: POST ${requestUrl}\n${requestBodyJson}\n`);
-      const data = Buffer.from(this.encryptor.encrypt(requestBodyJson));
-
-      const response = await axios({
-        method: 'post',
-        url: requestUrl,
-        data: data,
-        headers: {'content-type': 'application/json' },
-        maxContentLength: Infinity,
-        maxBodyLength: Infinity,
-        timeout: this.timeout,
-        responseType: 'arraybuffer',
-      });
-
-      const responseBytes = response.data;
-      const responseJsonString = this.encryptor.decrypt(responseBytes);
-
-      //this.log?.debug(`Gateway response:\n${responseJsonString}\n`);
-
-      const responseJson = JSON.parse(responseJsonString);
+      try {
+        responseJson ??= await this.exchange(this.protocol, command, requestBody);
+      } catch (e) {
+        if (!axios.isAxiosError(e)) {
+          // the gateway may have been updated while running, detect again on the next request
+          this.log?.warn(`Communication with gateway using ${this.protocol.name} failed, will re-detect encryption protocol`);
+          this.protocol = undefined;
+        }
+        throw e;
+      }
 
       if (responseJson.status !== 'success') {
         const reprRequestBody = JSON.stringify(requestBody);
@@ -146,6 +141,64 @@ export class SalusConnect {
     } finally {
       SalusConnect.lock.release();
     }
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private async exchange(protocol: GatewayProtocol, command:string, requestBody:any) {
+    const requestUrl = `http://${this.host}:${this.port}/deviceid/${command}`;
+    const requestBodyJson = JSON.stringify(requestBody);
+
+    //this.log?.debug(`Gateway request: POST ${requestUrl}\n${requestBodyJson}\n`);
+    const data = protocol.encrypt(requestBodyJson);
+
+    const response = await axios({
+      method: 'post',
+      url: requestUrl,
+      data: data,
+      headers: {'content-type': 'application/json' },
+      maxContentLength: Infinity,
+      maxBodyLength: Infinity,
+      timeout: this.timeout,
+      responseType: 'arraybuffer',
+    });
+
+    const responseBytes = Buffer.from(response.data);
+    const trailer = getFrame33Trailer(responseBytes);
+    if (trailer) {
+      throw new UnsupportedProtocolFrameError(trailer);
+    }
+    const responseJsonString = protocol.decrypt(responseBytes);
+
+    //this.log?.debug(`Gateway response:\n${responseJsonString}\n`);
+
+    return JSON.parse(responseJsonString);
+  }
+
+  // Gateway firmware versions use different encryption, try each known protocol and keep the one that works.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private async detectProtocol(): Promise<{ protocol: GatewayProtocol; response: any }> {
+    let sawProtocolFrame = false;
+    for (const protocol of getCandidateProtocols(this.eu_id)) {
+      try {
+        const response = await this.exchange(protocol, 'read', { 'requestAttr': 'readall' });
+        this.log?.info(`Connected to gateway using ${protocol.name} encryption`);
+        return { protocol, response };
+      } catch (e) {
+        if (axios.isAxiosError(e) && !e.response) {
+          // network problem, trying other protocols won't help
+          throw e;
+        }
+        if (e instanceof UnsupportedProtocolFrameError) {
+          sawProtocolFrame = true;
+        }
+        this.log?.debug(`Gateway protocol ${protocol.name} failed: ${e instanceof Error ? e.message : String(e)}`);
+      }
+    }
+    if (sawProtocolFrame) {
+      throw new Error('Gateway is reachable but none of the known encryption protocols worked. '
+        + 'New gateway firmware requires the real eu_id from the bottom side of the gateway, check that it is set correctly');
+    }
+    throw new Error('Could not decrypt gateway response with any known encryption protocol, check that eu_id is set correctly');
   }
 
   isCorrectDevice(device: Device) {
@@ -309,34 +362,6 @@ export class SalusConnect {
       }
       throw error;
     }
-  }
-}
-
-export class IT600Encryptor {
-
-  private iv: Buffer;
-  private key: Buffer;
-  private cipher_alg: string;
-
-  constructor(eu_id:string) {
-    this.iv = Buffer.from([0x88, 0xa6, 0xb0, 0x79, 0x5d, 0x85, 0xdb, 0xfc, 0xe6, 0xe0, 0xb3, 0xe9, 0xa6, 0x29, 0x65, 0x4b]);
-    this.key = Buffer.concat([crypto.createHash('md5').update(`Salus-${eu_id.toLowerCase()}`).digest(), Buffer.alloc(16)]);
-    this.cipher_alg = 'aes256';
-  }
-
-  encrypt(msg) {
-    const cipher = crypto.createCipheriv(this.cipher_alg, this.key, this.iv);
-    cipher.setAutoPadding(false);
-    const paddedData = pkcs7.pad(Buffer.from(msg));
-    const result = cipher.update(paddedData);
-    //no cipher.final(), otherwise it does not work anymore
-    return result;
-  }
-
-  decrypt(cipherBytes) {
-    const decipher = crypto.createDecipheriv(this.cipher_alg, this.key, this.iv);
-    const result = Buffer.concat([decipher.update(cipherBytes), decipher.final()]);
-    return result.toString('utf8');
   }
 }
 

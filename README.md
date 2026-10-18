@@ -14,6 +14,7 @@ Salus plugin for [HomeBridge](https://github.com/nfarina/homebridge) using a the
 
 ## Things to know
 * Plugin implements all modes of heating, but let's the thermostate decide if it is in cooling or heating mode. (for example by shorting S1 & S2 pins on the board)
+* Gateways on newer firmware (late 2025 onwards) use a different encryption, which the plugin detects automatically. It requires the real `eu_id` printed on the bottom side of the gateway, `0000000000000000` only works with older firmware.
 
 ## Getting started
 
